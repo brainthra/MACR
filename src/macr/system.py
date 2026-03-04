@@ -126,6 +126,15 @@ class System:
                 self.system.insert(idx, layer)
         self._updateActive()
 
+    def changeLayer(self, layer: Layer, idx=-1):
+        """
+        Changes layer by index in the system
+        By default index is set to last layer.
+        """
+        assert self.numberLayers > 0
+        self.system[idx] = layer
+        self._updateActive()
+
     def addSystem(self, system: Self):
         for layer in system.system:
             self.addLayer(layer)
