@@ -96,7 +96,7 @@ class System:
         self.activeLayers = None
         self.activeCount = None
         self.initialEnergies = None
-
+        self.numberLayers = 0
         # initialise response matrix
         self.rm = None
 
@@ -111,19 +111,20 @@ class System:
         """
         self.activeLayers = [idx for idx, i in enumerate(self.system) if i.active]
         self.activeCount = len(self.activeLayers)
+        self._updateCount()
 
-    def addLayer(self, layer: Layer, idx: int = None):
+    def _updateCount(self):
+        self.numberLayers = len(self.system)
+
+    def addLayer(self, layer: Layer):
         """
         Forces reset on initalisation
-        Allows adding at specific index with optional argument
         """
         if self.system is None:
             self.system = [layer]
         else:
-            if idx is None:
-                self.system.append(layer)
-            else:
-                self.system.insert(idx, layer)
+            self.system.append(layer)
+
         self._updateActive()
 
     def changeLayer(self, layer: Layer, idx=-1):
@@ -141,13 +142,15 @@ class System:
         self._updateActive()
 
     def updateEnergies(self, new_energies):
+        self.initialEnergies = new_energies
+
         for s in self:
             s.set_energies(new_energies)
 
-        if self.initialEnergies is not None:
-            self._initaliseEnergies()
-        if self.rm is not None:
-            self.generateResponse()
+        # if self.initialEnergies is not None:
+        #     self._initaliseEnergies()
+        # if self.rm is not None:
+        #     self.generateResponse()
 
     def updateEngine(self, new_engine):
         for s in self:
@@ -317,6 +320,7 @@ class System:
                 [yoff, yoff],
                 [1 + yoff, 1 + yoff],
                 facecolor=obs[mat],
+                edgecolor="k",
                 alpha=0.25,
             )
 

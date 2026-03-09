@@ -65,6 +65,9 @@ class Material:
         element_pat = re.compile(r"([A-Z][a-z]?)(\d*)")
         return element_pat.findall(compound)
 
+    def regenerateCrossSections(self):
+        self.generateCrossSections(self.material, self.energies)
+
     def generateCrossSections(self, dict, energies):
         x = self.engine.db["atomic"]
         sigma = np.zeros_like(energies)
