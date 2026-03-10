@@ -53,7 +53,7 @@ class Material:
         if energies is None:
             energies, _ = self.engine.db_scraper(list(self.material.keys())[0])
 
-        self.generateCrossSections(self.material, energies)
+        self.update_cross_sections(energies)
 
         if genericName is None:
             self.materialstr = material
@@ -65,17 +65,14 @@ class Material:
         element_pat = re.compile(r"([A-Z][a-z]?)(\d*)")
         return element_pat.findall(compound)
 
-    def regenerateCrossSections(self):
-        self.generateCrossSections(self.material, self.energies)
-
-    def generateCrossSections(self, dict, energies):
+    def update_cross_sections(self, energies):
         x = self.engine.db["atomic"]
         sigma = np.zeros_like(energies)
         total_weight = 0
-        for key, value in dict.items():
+        for key, value in self.material.items():
             total_weight += value * x[x["Symbol"] == key]["Weight"].to_numpy()[0]
 
-        for key, value in dict.items():
+        for key, value in self.material.items():
             e, c = self.engine.db_scraper(key, energies)
             fractional_weight = (
                 value * x[x["Symbol"] == key]["Weight"].to_numpy()[0]
@@ -132,7 +129,7 @@ class Material:
             track = self.get_absorption(thickness / nstep) * self.energies
             delta_e = self.get_transmission(thickness / nstep) * self.energies
             self.energies = np.clip(delta_e, 0, None)
-            self.generateCrossSections(self.material, self.energies)
+            self.update_cross_sections(self.energies)
 
             ## update arrays
             energy_map[:, n] = self.energies
@@ -142,12 +139,18 @@ class Material:
         zsteps = np.linspace(0, thickness, nstep)
 
         # reset material database:
-        self.generateCrossSections(self.material, hold_energies)
+        self.update_cross_sections(hold_energies)
 
         self.output["energy_map"] = energy_map
         self.output["track_map"] = track_map
         self.output["zsteps"] = zsteps
 
+    # depreciating functions
+    def generateCrossSections(self, material, energies):
+        self.update_cross_sections(energies)
+
+    def regenerateCrossSections(self):
+        self.update_cross_sections(self.energies)
 
 class Scintillator(Material):
     def __init__(

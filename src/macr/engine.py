@@ -5,6 +5,8 @@ import glob
 import re
 from pathlib import Path
 
+from typing import Literal
+
 # Resolve the path to the root of the project
 ROOT_DIR = Path(__file__).resolve().parents[0]  # Goes from engine.py -> database
 
@@ -54,7 +56,7 @@ class Engine:
 
     """
 
-    def __init__(self, name) -> None:
+    def __init__(self, name: Literal["NIST", "ESTAR", "PSTAR", "SRIM"]) -> None:
         assert (
             (name == "NIST")
             or (name == "ESTAR")
