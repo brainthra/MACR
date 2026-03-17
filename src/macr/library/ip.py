@@ -5,13 +5,13 @@ from ..library import ENERGIES, ENGINE
 
 # region - IP
 activeIPSR = Material(
-    "BaFBr", density=3.07, energies=ENERGIES, genericName="ActiveIPSR"
+    "BaFBr", density=3.07,  energies=ENERGIES, engine=ENGINE, genericName="ActiveIPSR"
 )
 activeIPTR = Material(
-    "BaFBr0.85I0.15", density=2.61, energies=ENERGIES, genericName="ActiveIPTR"
+    "BaFBr0.85I0.15", density=2.61,  energies=ENERGIES, engine=ENGINE, genericName="ActiveIPTR"
 )
 activeIPMS = Material(
-    "BaFBr0.85I0.15", density=3.18, energies=ENERGIES, genericName="ActiveIPMS"
+    "BaFBr0.85I0.15", density=3.18,  energies=ENERGIES, engine=ENGINE, genericName="ActiveIPMS"
 )
 
 """
