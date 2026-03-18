@@ -71,7 +71,7 @@ class Layer:
         self.regenerate_material()
 
     def regenerate_material(self):
-        self.material.generateCrossSections(self.material.material, self.energies)
+        self.material.update_cross_sections(self.energies)
 
 
 class System:
@@ -116,7 +116,7 @@ class System:
     def _updateCount(self):
         self.numberLayers = len(self.system)
 
-    def addLayer(self, layer: Layer):
+    def add_layer(self, layer: Layer):
         """
         Forces reset on initalisation
         """
@@ -127,7 +127,7 @@ class System:
 
         self._updateActive()
 
-    def changeLayer(self, layer: Layer, idx=-1):
+    def change_layer(self, layer: Layer, idx=-1):
         """
         Changes layer by index in the system
         By default index is set to last layer.
@@ -136,12 +136,12 @@ class System:
         self.system[idx] = layer
         self._updateActive()
 
-    def addSystem(self, system: Self):
+    def add_system(self, system: Self):
         for layer in system.system:
-            self.addLayer(layer)
+            self.add_layer(layer)
         self._updateActive()
 
-    def updateEnergies(self, new_energies):
+    def update_energies(self, new_energies):
         self.initialEnergies = new_energies
 
         for s in self:
@@ -150,16 +150,16 @@ class System:
         # if self.initialEnergies is not None:
         #     self._initaliseEnergies()
         # if self.rm is not None:
-        #     self.generateResponse()
+        #     self.generate_response()
 
-    def updateEngine(self, new_engine):
+    def update_engine(self, new_engine):
         for s in self:
             s.set_engine(new_engine)
 
         if self.rm is not None:
-            self.generateResponse()
+            self.generate_response()
 
-    def generateResponse(self, initial_intensity=None):
+    def generate_response(self, initial_intensity=None):
         self._initaliseEnergies()
         self._updateActive()
 
@@ -384,6 +384,51 @@ class System:
     def __len__(self):
         return len(self.system)
 
+    # depreciating metods
+    def addLayer(self, layer: Layer):
+        """
+        `Depreciating` use `add_layer` instead
+        Forces reset on initalisation
+        """
+        self.add_layer(layer)
+
+    def changeLayer(self, layer: Layer, idx=-1):
+        """
+        `Depreciating` use `change_layer` instead
+        Changes layer by index in the system
+        By default index is set to last layer.
+        """
+        self.change_layer(layer, idx)
+
+    def addSystem(self, system: Self):
+        """
+        `Depreciating` use `add_system` instead
+        Adds system to current system, layers are added sequentially
+        """
+        self.add_system(system)
+    
+    def updateEnergies(self, new_energies):
+        """
+        `Depreciating` use `update_energies` instead
+        Regenerate cross-sections for new energies
+        """
+        self.update_energies(new_energies)
+    
+    def updateEngine(self, new_engine):
+        """
+        `Depreciating` use `update_engine` instead
+        Regenerate cross-sections for new engine
+        """
+        self.update_engine(new_engine)
+    
+    def generateResponse(self, initial_intensity=None):
+        """
+        `Depreciating` use `generate_response` instead
+         Generates response matrix for system, if initial_intensity is provided it will be used as the initial intensity of the system, otherwise it will be assumed to be 1 for all energies.
+        """
+        self.generate_response(initial_intensity)
+    
+
 
 class _System:
     """
@@ -510,8 +555,8 @@ class _System:
 
             # update system
             self.system[f"A{loc}"][0].energies = np.clip(delta_e, 0, None)
-            self.system[f"A{loc}"][0].generateCrossSections(
-                self.system[f"A{loc}"][0].material, self.system[f"A{loc}"][0].energies
+            self.system[f"A{loc}"][0].update_cross_sections(
+                self.system[f"A{loc}"][0].energies
             )
 
             # update arrays
@@ -526,7 +571,7 @@ class _System:
         # reset material database:
         for s in self.system.values():
             s[0].energies = self.initialEnergies
-            s[0].generateCrossSections(s[0].material, self.initialEnergies)
+            s[0].update_cross_sections(self.initialEnergies)
 
         self.output["energy_map"] = energy_map
         self.output["track_map"] = track_map
