@@ -147,11 +147,6 @@ class System:
         for s in self:
             s.set_energies(new_energies)
 
-        # if self.initialEnergies is not None:
-        #     self._initaliseEnergies()
-        # if self.rm is not None:
-        #     self.generate_response()
-
     def update_engine(self, new_engine):
         for s in self:
             s.set_engine(new_engine)
@@ -406,28 +401,27 @@ class System:
         Adds system to current system, layers are added sequentially
         """
         self.add_system(system)
-    
+
     def updateEnergies(self, new_energies):
         """
         `Depreciating` use `update_energies` instead
         Regenerate cross-sections for new energies
         """
         self.update_energies(new_energies)
-    
+
     def updateEngine(self, new_engine):
         """
         `Depreciating` use `update_engine` instead
         Regenerate cross-sections for new engine
         """
         self.update_engine(new_engine)
-    
+
     def generateResponse(self, initial_intensity=None):
         """
         `Depreciating` use `generate_response` instead
          Generates response matrix for system, if initial_intensity is provided it will be used as the initial intensity of the system, otherwise it will be assumed to be 1 for all energies.
         """
         self.generate_response(initial_intensity)
-    
 
 
 class _System:
@@ -637,7 +631,7 @@ class _System:
             legendentry.append(Patch(facecolor=colors[idx], alpha=0.25))
 
         x = 0
-        if ax == None:
+        if ax is None:
             fig, ax = plt.subplots(1, 1)
 
         material_order = []
