@@ -18,17 +18,13 @@ For the source code of examples and the verification notebooks please clone the 
     git clone https://github.com/cda24/MACR.git 
     ```
 
-2. Install requirements:
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-3. Install the package:
+2. Install the package:
 
     ```bash
     pip install -e .
     ```
 
+> Requirements in pyproject.toml
 
 ## References 
 The primary references should be to the relevant material databases:
