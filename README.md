@@ -1,5 +1,4 @@
 # MACR
-# My Project
 
 [![Tests](https://github.com/cda24/MACR/actions/workflows/tests.yml/badge.svg)](https://github.com/cda24/MACR/actions)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
