@@ -3,8 +3,7 @@
 [![Tests](https://github.com/cda24/MACR/actions/workflows/tests.yml/badge.svg)](https://github.com/cda24/MACR/actions)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 
-A simple Python project using pytest.
-**MACR** (pronounced _maker_) - The Material Attenuation Calculator for Radiation - is a python library to quickly generate interaction cross-sections of any material for protons (NIST PSTAR and SRIM), electrons (NIST ESTAR), and x-rays (NIST XCOM).
+**MACR** (pronounced _maker_) - The Material Attenuation Calculator for Radiation - is a python library to generate interaction cross-sections of any material for protons (NIST PSTAR and SRIM), electrons (NIST ESTAR), and x-rays (NIST XCOM).
 
 It contains a database of cross-sections for each element, which are then combined according to their atomic weight to provide cross-sections for materials and compounds. The library can be used to the transmission and absorption through multiple layers of different materials in a one-dimensional configuration (two-dimensional is an ongoing project).
 
@@ -23,8 +22,6 @@ For the source code of examples and the verification notebooks please clone the 
     ```bash
     pip install -e .
     ```
-
-> Requirements in pyproject.toml
 
 ## References 
 The primary references should be to the relevant material databases:
