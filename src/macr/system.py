@@ -6,7 +6,8 @@ from scipy.signal import find_peaks
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 import pickle
-from typing import Self
+from typing import Self, Literal, List
+import copy
 
 
 class Layer:
@@ -103,7 +104,7 @@ class System:
     def _initaliseEnergies(self):
         assert self.system != []
         if self.initialEnergies is None:
-            self.initialEnergies = self[0].energies
+            self.initialEnergies = self.system[0].energies
 
     def _updateActive(self):
         """
@@ -115,6 +116,15 @@ class System:
 
     def _updateCount(self):
         self.numberLayers = len(self.system)
+
+    # adding to system
+    def add(self, additive: Literal[Layer, Self], idx: int = None):
+        if isinstance(additive, Layer):
+            self.add_layer(additive, idx)
+        elif isinstance(additive, System):
+            self.add_system(additive, idx)
+        else:
+            pass
 
     def add_layer(self, layer: Layer, idx: int = None):
         """
@@ -130,6 +140,12 @@ class System:
 
         self._updateActive()
 
+    def add_system(self, system: Self, idx: int = None):
+        for layer in system.system:
+            self.add_layer(layer, idx)
+        self._updateActive()
+
+    # changing existing system
     def change_layer(self, layer: Layer, idx: int = -1):
         """
         Changes layer by index in the system
@@ -137,11 +153,6 @@ class System:
         """
         assert self.numberLayers > 0
         self.system[idx] = layer
-        self._updateActive()
-
-    def add_system(self, system: Self):
-        for layer in system.system:
-            self.add_layer(layer)
         self._updateActive()
 
     def update_energies(self, new_energies):
@@ -157,6 +168,7 @@ class System:
         if self.rm is not None:
             self.generate_response()
 
+    # processing system
     def generate_response(self, initial_intensity=None):
         self._initaliseEnergies()
         self._updateActive()
@@ -425,3 +437,105 @@ class System:
          Generates response matrix for system, if initial_intensity is provided it will be used as the initial intensity of the system, otherwise it will be assumed to be 1 for all energies.
         """
         self.generate_response(initial_intensity)
+
+
+class LinearBuilder(System):
+    def __init__(self, system=None):
+        System.__init__(self, system)
+        self.type = "Linear"
+
+    def __getitem__(self, index: int) -> np.ndarray:
+        """
+        Overrides the system __getitem__ method to retrieve entry in the response matrix
+        """
+        if self.rm is None:
+            self.generate_response()
+        return self.rm[self.activeLayers[index], :]
+
+
+class ArealBuilder(System):
+    def __init__(
+        self, global_system: System = None, filter_system: List[System, Layer] = None
+    ):
+        System.__init__(self, global_system)
+        self.type = "Areal"
+
+        self.global_system = global_system
+        self.filter_system = filter_system
+
+    def _build_rm(self):
+        """
+        Builds a flat response matrix for a global filter/detector set and individual filters
+
+        `Global_system` should be a macr.System that are common to all aspects of the areal filters
+        `Filter_system` is a list of macr.System or macr.Layer corresponding to unique regions in the filter pack these are exclusively passive layers, active layers supplied in the filter_system are ignored
+
+        The response matrix is built as an array with size:
+            [Energies, len(filter_system) * global_system.activeLayers]
+
+        For a global_system with a single active layer:
+            self.rm[0,:] -> filter_system[0]
+            self.rm[N,:] -> filter_system[N]
+
+        For a global_system with M active layers:
+            self.rm[0,0,:] -> filter_system[0], global_system[global_system.activeLayers[0]]
+            self.rm[N,M,:] -> filter_system[N], global_system[global_system.activeLayers[M]]
+
+        Good practice should exclude active layers from the filter_system but this is not strictly prohibited
+        """
+        # clean system
+        self._initaliseEnergies()
+        self._updateActive()
+
+        # calculate necessary size
+        self.rm = np.zeros(
+            (
+                len(self.filter_system),
+                len(self.global_system.activeLayers),
+                len(self.initialEnergies),
+            )
+        )
+
+        for idx, local_filter in enumerate(self.filter_system):
+            rm = copy.deepcopy(self.global_system)
+            # adds entry at beginning of array - potentially allow more explicit positions later?
+            rm.add(local_filter, 0)
+            # update and generate response for subsystem
+            rm.updateEnergies(self.initialEnergies)
+            rm.generate_response()
+
+            # apply to super system
+            for jdx in range(len(self.global_system.activeLayers)):
+                self.rm[idx, jdx, :] = rm.rm[jdx, :]
+
+        # enforce reduced dimensions where possible
+        if len(self.global_system.activeLayers) == 1:
+            """ 
+            Needs to happen at end to ensure address is correct for build
+            """
+            self.rm = np.squeeze(self.rm)
+
+    def generate_response(self, initial_intensity=None):
+        """
+        Overrides the System generate to avoid clashes
+        """
+        self._build_rm()
+        if initial_intensity is None:
+            ts = np.ones_like(self.initialEnergies)
+        else:
+            assert len(initial_intensity) == len(
+                self.initialEnergies
+            ), f"""Length of Initial_intensity {len(initial_intensity)} does 
+                   not match length of material_energies {len(self.initialEnergies)}
+                   If presupplinging initial intensity it must match energy array"""
+            ts = initial_intensity
+
+        self.rm *= ts
+
+    def __getitem__(self, index: int) -> np.ndarray:
+        """
+        Overrides the system __getitem__ method to retrieve entry in the response matrix
+        """
+        if self.rm is None:
+            self.generate_response()
+        return self.rm[self.activeLayers[index], :]
