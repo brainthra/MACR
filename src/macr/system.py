@@ -454,6 +454,26 @@ class LinearBuilder(System):
 
 
 class ArealBuilder(System):
+    """
+    Builds a flat response matrix for a global filter/detector set and individual filters
+
+    `Global_system` should be a macr.System that are common to all aspects of the areal filters
+    `Filter_system` is a list of macr.System or macr.Layer corresponding to unique regions in the filter pack these are exclusively passive layers, active layers supplied in the filter_system are ignored
+
+    The response matrix is built as an array with size:
+        [Energies, len(filter_system) * global_system.activeLayers]
+
+    For a global_system with a single active layer:
+        self.rm[0,:] -> filter_system[0]
+        self.rm[N,:] -> filter_system[N]
+
+    For a global_system with M active layers:
+        self.rm[0,0,:] -> filter_system[0], global_system[global_system.activeLayers[0]]
+        self.rm[N,M,:] -> filter_system[N], global_system[global_system.activeLayers[M]]
+
+    Good practice should exclude active layers from the filter_system but this is not strictly prohibited
+    """
+
     def __init__(
         self, global_system: System = None, filter_system: List[System, Layer] = None
     ):
@@ -464,25 +484,7 @@ class ArealBuilder(System):
         self.filter_system = filter_system
 
     def _build_rm(self):
-        """
-        Builds a flat response matrix for a global filter/detector set and individual filters
 
-        `Global_system` should be a macr.System that are common to all aspects of the areal filters
-        `Filter_system` is a list of macr.System or macr.Layer corresponding to unique regions in the filter pack these are exclusively passive layers, active layers supplied in the filter_system are ignored
-
-        The response matrix is built as an array with size:
-            [Energies, len(filter_system) * global_system.activeLayers]
-
-        For a global_system with a single active layer:
-            self.rm[0,:] -> filter_system[0]
-            self.rm[N,:] -> filter_system[N]
-
-        For a global_system with M active layers:
-            self.rm[0,0,:] -> filter_system[0], global_system[global_system.activeLayers[0]]
-            self.rm[N,M,:] -> filter_system[N], global_system[global_system.activeLayers[M]]
-
-        Good practice should exclude active layers from the filter_system but this is not strictly prohibited
-        """
         # clean system
         self._initaliseEnergies()
         self._updateActive()
