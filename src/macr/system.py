@@ -475,7 +475,7 @@ class ArealBuilder(System):
     """
 
     def __init__(
-        self, global_system: System = None, filter_system: List[System, Layer] = None
+        self, global_system: System = None, filter_system: list[System | Layer] = None
     ):
         System.__init__(self, global_system)
         self.type = "Areal"
