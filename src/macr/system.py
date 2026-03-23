@@ -6,7 +6,7 @@ from scipy.signal import find_peaks
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 import pickle
-from typing import Self, Literal, List
+from typing import Self, Literal
 import copy
 
 
