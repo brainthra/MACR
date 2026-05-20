@@ -22,7 +22,4 @@ MACR = ["database/**/*"]
 channels = ["conda-forge"]
 platforms = ["osx-arm64"]
 
-[tool.pixi.pypi-dependencies]
-macr = { path = ".", editable = true }
-
 [tool.pixi.tasks]
