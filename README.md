@@ -40,7 +40,7 @@ Helper tools for ROI analysis of images, and direct unfolding from measurements 
 from macr.material import Material
 import matplotlib.pyplot as plt 
 
-Al = Material(materialstr='Al',density=2.71)
+Al = Material(material='Al',density=2.71)
 
 plt.plot(Al.energies,Al.sigma)
 plt.ylabel('Cross-section (g/cc)')
@@ -52,7 +52,7 @@ plt.xlabel('Energy (MeV)')
 import numpy as np 
 
 energies = np.linspace(0.01,1,100) #MeV
-Al = Material(materialstr='Al',density=2.71,energies=energies)
+Al = Material(material='Al',density=2.71,energies=energies)
 ```
 
 #### Custom material transmission
@@ -60,7 +60,7 @@ Al = Material(materialstr='Al',density=2.71,energies=energies)
 import numpy as np 
 
 energies = np.linspace(0.01,1,100) #MeV
-CsI = Material(materialstr='CsI',density=4.51,energies=energies)
+CsI = Material(material='CsI',density=4.51,energies=energies)
 
 plt.plot(energies,CsI.get_transmission(1),label='Transmitted through 1 mm')
 plt.plot(energies,CsI.get_absorption(1),label='Absorbed in 1 mm')
