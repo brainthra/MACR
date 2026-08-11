@@ -23,6 +23,7 @@ For the source code of examples and the verification notebooks please clone the 
     pip install -e .
     ```
 
+
 ## Description
 
 MACR is structured as follows:
