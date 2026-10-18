@@ -1,5 +1,5 @@
 import pytest
-from macr.engine import Engine
+from macr.engine import Engine, EngineDatabase
 import pandas as pd
 
 
@@ -41,13 +41,13 @@ def test_engine_name(engine_names):
 
 
 def test_engine_db_initilisation(init_nist_engine):
-    assert isinstance(init_nist_engine.db, dict)
+    assert isinstance(init_nist_engine.database, EngineDatabase)
 
 
 def test_atomic_db_creation(init_nist_engine):
-    assert isinstance(init_nist_engine.db["atomic"], pd.DataFrame)
+    assert isinstance(init_nist_engine.database.atomic, pd.DataFrame)
     assert all(
-        col in init_nist_engine.db["atomic"].columns
+        col in init_nist_engine.database.atomic.columns
         for col in ["Z", "Symbol", "Name", "Weight", "Density"]
     )
 
