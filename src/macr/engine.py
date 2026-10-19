@@ -4,7 +4,8 @@ import pandas as pd
 import glob
 import re
 from pathlib import Path
-
+from enum import IntEnum
+from dataclasses import dataclass
 from typing import Literal
 
 # Resolve the path to the root of the project
@@ -12,6 +13,67 @@ ROOT_DIR = Path(__file__).resolve().parents[0]  # Goes from engine.py -> databas
 
 # Now get path to the database directory
 DATABASE_DIR = ROOT_DIR / "database"
+
+AVAILABLE_DATABASES = Literal["NIST", "ESTAR", "PSTAR", "SRIM"]
+
+class NISTColumn(IntEnum):
+    COHERENT_SCATTER = 1
+    INCOHERENT_SCATTER = 2
+    PHOTOELECTRIC_ABSORPTION = 3
+    NUCLEAR_PAIR_PRODUCTION = 4
+    ELECTRONIC_PAIR_PRODUCTION = 5
+    TOTAL = 6
+
+class ESTARColumn(IntEnum):
+    COLLISIONAL = 1
+    RADIATIVE = 2
+    TOTAL = 3
+
+class PSTARColumn(IntEnum):
+    COLLISIONAL = 1
+    RADIATIVE = 2
+    TOTAL = 3
+
+class SRIMColumn(IntEnum):
+    ELECTRONIC = 1
+    NUCLEAR = 2
+    TOTAL = 3
+
+@dataclass(frozen=True)
+class EngineConfig:
+    skiprows: int
+    default_column: int
+    avail_columns: IntEnum
+    warning: str | None = None
+
+ENGINE_CONFIGS: dict[str, EngineConfig] = {
+    "NIST": EngineConfig(
+        skiprows=3,
+        avail_columns=NISTColumn,
+        default_column=NISTColumn.TOTAL
+    ),
+    "ESTAR": EngineConfig(
+        skiprows=8,
+        default_column=ESTARColumn.TOTAL,
+        avail_columns=ESTARColumn,
+        warning="ESTAR database incomplete, please consider pushing update to repo",
+    ),
+    "PSTAR": EngineConfig(
+        skiprows=8,
+        avail_columns=PSTARColumn,
+        default_column=PSTARColumn.TOTAL,
+        warning="PSTAR database incomplete, please consider SRIM engine instead",
+    ),
+    "SRIM": EngineConfig(
+        skiprows=25, 
+        avail_columns=SRIMColumn,
+        default_column=SRIMColumn.TOTAL),
+}
+
+@dataclass
+class EngineDatabase:
+    atomic: pd.DataFrame
+    material_list: list[str]
 
 
 class Engine:
@@ -57,75 +119,64 @@ class Engine:
     """
 
     def __init__(self, name: Literal["NIST", "ESTAR", "PSTAR", "SRIM"]) -> None:
-        assert (
-            (name == "NIST")
-            or (name == "ESTAR")
-            or (name == "PSTAR")
-            or (name == "SRIM")
-        )
+        assert name in ENGINE_CONFIGS
 
-        # set Engine Version
-        self.name = name
-        self.db_path = f"{DATABASE_DIR}/{self.name}/"
+        config: EngineConfig = ENGINE_CONFIGS[name]
+        
+        self.name: str = name
+        self.db_path: str = f"{DATABASE_DIR}/{self.name}/"
 
         # set Interpolation Method - can be reconfigured if desired but pchip worked best under testing
         self._interpolation_method = pchip
 
-        # Configure Elemental Database
-        self.db = {
-            "names": ["atomic", "material_list"],
-            "formats": [pd.DataFrame, list],
-        }
-        self.db["atomic"] = self._generate_atomic_table()
-        self.db["material_list"] = self._generate_material_list()
+        self.database = EngineDatabase(
+            atomic=self._generate_atomic_table(),
+            material_list=self._generate_material_list(),
+        )
+        
+        self.skiprows: int = config.skiprows
+        self.col: int = config.default_column
+        if config.warning:
+            print(config.warning)
 
-        # Set Engine Specific Lables
-        if self.name == "NIST":
-            self.skiprows = 3
-            self.col = -1
-        elif self.name == "ESTAR":
-            self.skiprows = 8
-            self.col = -1
-            print("ESTAR database incomplete, please consider pushing update to repo")
-        elif self.name == "PSTAR":
-            self.skiprows = 8
-            self.col = -1
-            print("PSTAR database incomplete, please consider SRIM engine instead")
-        elif self.name == "SRIM":
-            self.skiprows = 25
-            self.col = 3
-
-    def _declare_new_columns(self, val):
+    def list_available_columns(self):
         """
-        NIST AND ESTAR databases include additional crosssections.
-        For NIST:
-        Col 0 - Energies
-        Col 1 - Coherent Scatter (Thomson)
-        Col 2 - Incoherent Scatter (Compton)
-        Col 3 - Photoelectric Absorption
-        Col 4 - Nuclear Pair Production
-        Col 5 - Electronic Pair Production
-        Col 6 - Total (All) [DEFAULT]
-
-        For ESTAR:
-        Col 0 - Energies
-        Col 1 - Collisional (MeV cm2/g)
-        Col 2 - Radiative (MeV cm2/g)
-        Col 3 - Total (MeV cm2/g)  [DEFAULT]
-
-        For PSTAR:
-        Col 0 - Energies
-        Col 1 - Collisional (MeV cm2/g)
-        Col 2 - Radiative (MeV cm2/g)
-        Col 3 - Total (MeV cm2/g)  [DEFAULT]
-
-        For SRIM:
-        Col 0 - Energies
-        Col 2 - Electronic (MeV cm2/g)
-        Col 3 - Nuclear (MeV cm2/g)
-        Col 4 - Total (MeV cm2/g)  [DEFAULT]
+        Lists the available columns for the current engine.
         """
-        self.col = val
+        for e in ENGINE_CONFIGS[self.name].avail_columns:
+            print(f"{e.name}: {e.value}")
+
+    def change_column(self, new_col: int):
+        """
+        Changes the column read by the database scraper.
+        Use Engine.list_available_columns() to see valid columns.
+        The appropriate Column Enum can be used to select the desired column for the given engine.
+
+        Example:
+        >> nist_engine = Engine("NIST")
+        >> nist_engine.change_column(NISTColumn.COHERENT_SCATTER)
+
+        Parameters
+        ----------
+        new_col: int - the column number to read from the database file. Must be a valid column for the given engine.
+        """
+        # Check if the new column is valid for the current engine
+        if new_col not in [e.value for e in ENGINE_CONFIGS[self.name].avail_columns]:
+            raise ValueError(
+                f"Invalid column {new_col} for engine {self.name}. Use list_available_columns() to see valid columns."
+            )
+        self.col = new_col
+        print(f"Column changed to {ENGINE_CONFIGS[self.name].avail_columns(new_col).name} ({new_col}) for engine {self.name}.")
+
+    def _declare_new_columns(self, val: int):
+        """
+        Deprecated method for changing the column read by the database scraper.
+        Use change_column(new_col) instead.
+        """
+        print(
+            "Warning: _declare_new_columns is deprecated. Use change_column(new_col) instead."
+        )
+        self.change_column(val)
 
     def _generate_atomic_table(self):
         """
@@ -204,7 +255,7 @@ class Engine:
         # Return the element counts dictionary
         return element_counts
 
-    def nonuniquer(self, arr, offset=1e-7):
+    def _nonuniquer(self, arr, offset=1e-7):
         """
         Shifts the k-edge in material databases by 0.1 eV to enable interpolation at the edge
         """
@@ -247,7 +298,7 @@ class Engine:
             if energies is None:
                 return elist, clist
             else:
-                ein2 = self.nonuniquer(elist)
+                ein2 = self._nonuniquer(elist)
                 c3 = pchip(ein2, clist)
                 cout = c3(energies)
                 return energies, cout
@@ -296,7 +347,7 @@ class Engine:
                         usecols=[0, 1, 2, 3],
                     )
 
-                    e_list = self.nonuniquer(
+                    e_list = self._nonuniquer(
                         np.array(data[:, 0]) * np.array(data[:, 1])
                     )
 
@@ -324,7 +375,7 @@ class Engine:
                         f"{self.db_path}{self.name}_{material}.txt",
                         skiprows=self.skiprows,
                     )
-                    e_list = self.nonuniquer(np.array(data[:, 0]))
+                    e_list = self._nonuniquer(np.array(data[:, 0]))
                     c_list = np.array(data[:, self.col])
                     if energies is not None:
                         c_list = self._interpolation(
@@ -347,7 +398,7 @@ class Engine:
         if energies is None:
             return elist, clist
         else:
-            ein2 = self.nonuniquer(elist)
+            ein2 = self._nonuniquer(elist)
             c3 = pchip(ein2, clist)
             cout = c3(energies)
             return energies, cout
@@ -357,6 +408,6 @@ class Engine:
         Return list of atomic symbols present in the atomic DB but missing as
         individual material files for this Engine instance.
         """
-        atomic_symbols = set(self.db["atomic"]["Symbol"].astype(str).tolist())
+        atomic_symbols = set(self.database.atomic["Symbol"].astype(str).tolist())
         missing = sorted(list(atomic_symbols - self._materials))
         return missing

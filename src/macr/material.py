@@ -66,7 +66,7 @@ class Material:
         return element_pat.findall(compound)
 
     def update_cross_sections(self, energies):
-        x = self.engine.db["atomic"]
+        x = self.engine.database.atomic
         sigma = np.zeros_like(energies)
         total_weight = 0
         for key, value in self.material.items():
