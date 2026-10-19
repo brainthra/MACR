@@ -67,6 +67,15 @@ plt.plot(energies,CsI.get_transmission(1),label='Transmitted through 1 mm')
 plt.plot(energies,CsI.get_absorption(1),label='Absorbed in 1 mm')
 ```
 
+#### Switching the cross-section type read from the database
+```python 
+from macr.engine import Engine, NISTColumn
+
+nist_engine = Engine("NIST") # this sets the col to 6 by default
+# Switch to Coherent scattering cross-sections
+nist_engine.set_column(NISTColumn.COHERENT_SCATTER)
+```
+
 #### Defining Layers
 Common materials are predefined in the configured library so for simplicity we can load them directly and create a layers of _passive_ Al and _active_ CsI
 
