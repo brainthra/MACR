@@ -1,5 +1,5 @@
 import pytest
-from macr.engine import Engine, EngineDatabase
+from macr.engine import Engine, EngineDatabase, NISTColumn
 import pandas as pd
 
 
@@ -77,3 +77,21 @@ def test_srim_missing_atomic_entries(init_srim_engine):
         "Np",
         "Pu",
     ]
+
+def test_changing_column(init_nist_engine):
+    init_nist_engine._declare_new_columns(NISTColumn.COHERENT_SCATTER) 
+    assert init_nist_engine.col == 1
+
+def test_available_columns_nist(init_nist_engine, capsys):
+    init_nist_engine.list_available_columns() 
+    
+    captured = capsys.readouterr()
+    
+    assert captured.out == (
+                            "COHERENT_SCATTER: 1\n"
+                            "INCOHERENT_SCATTER: 2\n" 
+                            "PHOTOELECTRIC_ABSORPTION: 3\n"
+                            "NUCLEAR_PAIR_PRODUCTION: 4\n" 
+                            "ELECTRONIC_PAIR_PRODUCTION: 5\n"
+                            "TOTAL: 6\n" 
+                            )
