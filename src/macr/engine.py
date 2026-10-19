@@ -43,25 +43,30 @@ class SRIMColumn(IntEnum):
 class EngineConfig:
     skiprows: int
     default_column: int
+    avail_columns: IntEnum
     warning: str | None = None
 
 ENGINE_CONFIGS: dict[str, EngineConfig] = {
     "NIST": EngineConfig(
-        skiprows=3, 
+        skiprows=3,
+        avail_columns=NISTColumn,
         default_column=NISTColumn.TOTAL
     ),
     "ESTAR": EngineConfig(
         skiprows=8,
         default_column=ESTARColumn.TOTAL,
+        avail_columns=ESTARColumn,
         warning="ESTAR database incomplete, please consider pushing update to repo",
     ),
     "PSTAR": EngineConfig(
         skiprows=8,
+        avail_columns=PSTARColumn,
         default_column=PSTARColumn.TOTAL,
         warning="PSTAR database incomplete, please consider SRIM engine instead",
     ),
     "SRIM": EngineConfig(
         skiprows=25, 
+        avail_columns=SRIMColumn,
         default_column=SRIMColumn.TOTAL),
 }
 
@@ -134,37 +139,44 @@ class Engine:
         if config.warning:
             print(config.warning)
 
-    def _declare_new_columns(self, val):
+    def list_available_columns(self):
         """
-        NIST AND ESTAR databases include additional crosssections.
-        For NIST:
-        Col 0 - Energies
-        Col 1 - Coherent Scatter (Thomson)
-        Col 2 - Incoherent Scatter (Compton)
-        Col 3 - Photoelectric Absorption
-        Col 4 - Nuclear Pair Production
-        Col 5 - Electronic Pair Production
-        Col 6 - Total (All) [DEFAULT]
-
-        For ESTAR:
-        Col 0 - Energies
-        Col 1 - Collisional (MeV cm2/g)
-        Col 2 - Radiative (MeV cm2/g)
-        Col 3 - Total (MeV cm2/g)  [DEFAULT]
-
-        For PSTAR:
-        Col 0 - Energies
-        Col 1 - Collisional (MeV cm2/g)
-        Col 2 - Radiative (MeV cm2/g)
-        Col 3 - Total (MeV cm2/g)  [DEFAULT]
-
-        For SRIM:
-        Col 0 - Energies
-        Col 2 - Electronic (MeV cm2/g)
-        Col 3 - Nuclear (MeV cm2/g)
-        Col 4 - Total (MeV cm2/g)  [DEFAULT]
+        Lists the available columns for the current engine.
         """
-        self.col = val
+        for e in ENGINE_CONFIGS[self.name].avail_columns:
+            print(f"{e.name}: {e.value}")
+
+    def change_column(self, new_col: int):
+        """
+        Changes the column read by the database scraper.
+        Use Engine.list_available_columns() to see valid columns.
+        The appropriate Column Enum can be used to select the desired column for the given engine.
+
+        Example:
+        >> nist_engine = Engine("NIST")
+        >> nist_engine.change_column(NISTColumn.COHERENT_SCATTER)
+
+        Parameters
+        ----------
+        new_col: int - the column number to read from the database file. Must be a valid column for the given engine.
+        """
+        # Check if the new column is valid for the current engine
+        if new_col not in [e.value for e in ENGINE_CONFIGS[self.name].avail_columns]:
+            raise ValueError(
+                f"Invalid column {new_col} for engine {self.name}. Use list_available_columns() to see valid columns."
+            )
+        self.col = new_col
+        print(f"Column changed to {ENGINE_CONFIGS[self.name].avail_columns(new_col).name} ({new_col}) for engine {self.name}.")
+
+    def _declare_new_columns(self, val: int):
+        """
+        Deprecated method for changing the column read by the database scraper.
+        Use change_column(new_col) instead.
+        """
+        print(
+            "Warning: _declare_new_columns is deprecated. Use change_column(new_col) instead."
+        )
+        self.change_column(val)
 
     def _generate_atomic_table(self):
         """
