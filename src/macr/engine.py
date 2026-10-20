@@ -365,51 +365,5 @@ class Engine:
         assert np.all(np.diff(result) > 0), print(result)
         return result
 
-    def _db_scraper(self, material, energies=None):
-        """
-        Main database scraping tool.
-        Looks for each element in the database according to the material string and loads necessary cross-sections
-        (Optional) Interpolates cross-sections over the desired energies.
-        """
-
-        if material.lower() == "vac":
-            if energies is None:
-                print("Energies must be defined for vacuum transmission")
-            else:
-                elist = energies
-                clist = np.ones((1, len(energies)))
-                return elist, clist[0]
-        else:
-            data = np.loadtxt(
-                f"{self.db_path}{self.name}_{material}.txt", skiprows=self.skip_rows
-            )
-            elist = np.array(data[:, 0])
-            clist = np.array(data[:, self.col])
-            if energies is None:
-                return elist, clist
-            else:
-                ein2 = self._nonuniquer(elist)
-                c3 = pchip(ein2, clist)
-                cout = c3(energies)
-                return energies, cout
-
     def _interpolation(self, e, sigma, method=pchip):
         return method(e, sigma)
-
-    def _raw_db_scraper(self, file_string, energies=None):
-        """
-        Flexibile database scraper, used in testing to evaluate new cross-section
-        tables outside of the main database.
-
-        Declare "file_string" as full path to desired file.
-        """
-        data = np.loadtxt(f"{file_string}", skiprows=self.skip_rows)
-        elist = np.array(data[:, 0])
-        clist = np.array(data[:, self.col])
-        if energies is None:
-            return elist, clist
-        else:
-            ein2 = self._nonuniquer(elist)
-            c3 = pchip(ein2, clist)
-            cout = c3(energies)
-            return energies, cout
