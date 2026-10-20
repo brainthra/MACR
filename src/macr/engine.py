@@ -14,7 +14,7 @@ ROOT_DIR = Path(__file__).resolve().parents[0]  # Goes from engine.py -> databas
 # Now get path to the database directory
 DATABASE_DIR = ROOT_DIR / "database"
 
-AVAILABLE_DATABASES = Literal["NIST", "ESTAR", "PSTAR", "SRIM"]
+AVAILABLE_DATABASES = ["NIST", "ESTAR", "PSTAR", "SRIM"]
 
 class NISTColumn(IntEnum):
     COHERENT_SCATTER = 1
@@ -41,33 +41,35 @@ class SRIMColumn(IntEnum):
 
 @dataclass(frozen=True)
 class EngineConfig:
-    skiprows: int
+    skip_rows: int
     default_column: int
     avail_columns: IntEnum
     warning: str | None = None
 
 ENGINE_CONFIGS: dict[str, EngineConfig] = {
     "NIST": EngineConfig(
-        skiprows=3,
-        avail_columns=NISTColumn,
-        default_column=NISTColumn.TOTAL
+        skip_rows=3,
+        default_column=NISTColumn.TOTAL,
+        avail_columns=NISTColumn
+        
     ),
     "ESTAR": EngineConfig(
-        skiprows=8,
+        skip_rows=8,
         default_column=ESTARColumn.TOTAL,
         avail_columns=ESTARColumn,
         warning="ESTAR database incomplete, please consider pushing update to repo",
     ),
     "PSTAR": EngineConfig(
-        skiprows=8,
-        avail_columns=PSTARColumn,
+        skip_rows=8,
         default_column=PSTARColumn.TOTAL,
+        avail_columns=PSTARColumn,
         warning="PSTAR database incomplete, please consider SRIM engine instead",
     ),
     "SRIM": EngineConfig(
-        skiprows=25, 
-        avail_columns=SRIMColumn,
-        default_column=SRIMColumn.TOTAL),
+        skip_rows=25, 
+        default_column=SRIMColumn.TOTAL,
+        avail_columns=SRIMColumn
+    ),
 }
 
 @dataclass
@@ -134,96 +136,10 @@ class Engine:
             material_list=self._generate_material_list(),
         )
         
-        self.skiprows: int = config.skiprows
+        self.skip_rows: int = config.skip_rows
         self.col: int = config.default_column
         if config.warning:
             print(config.warning)
-
-    def list_available_columns(self):
-        """
-        Lists the available columns for the current engine.
-        """
-        for e in ENGINE_CONFIGS[self.name].avail_columns:
-            print(f"{e.name}: {e.value}")
-
-    def change_column(self, new_col: int):
-        """
-        Changes the column read by the database scraper.
-        Use Engine.list_available_columns() to see valid columns.
-        The appropriate Column Enum can be used to select the desired column for the given engine.
-
-        Example:
-        >> nist_engine = Engine("NIST")
-        >> nist_engine.change_column(NISTColumn.COHERENT_SCATTER)
-
-        Parameters
-        ----------
-        new_col: int - the column number to read from the database file. Must be a valid column for the given engine.
-        """
-        # Check if the new column is valid for the current engine
-        if new_col not in [e.value for e in ENGINE_CONFIGS[self.name].avail_columns]:
-            raise ValueError(
-                f"Invalid column {new_col} for engine {self.name}. Use list_available_columns() to see valid columns."
-            )
-        self.col = new_col
-        print(f"Column changed to {ENGINE_CONFIGS[self.name].avail_columns(new_col).name} ({new_col}) for engine {self.name}.")
-
-    def _declare_new_columns(self, val: int):
-        """
-        Deprecated method for changing the column read by the database scraper.
-        Use change_column(new_col) instead.
-        """
-        print(
-            "Warning: _declare_new_columns is deprecated. Use change_column(new_col) instead."
-        )
-        self.change_column(val)
-
-    def _generate_atomic_table(self):
-        """
-        Return dataframe for atomic number and weight
-        Includes symbol parsing frame as well
-        """
-        df = pd.read_csv(
-            f"{DATABASE_DIR}/atomic_weight.db",
-            delimiter="\t",
-            header=0,
-            usecols=[0, 1, 2, 3, 5],
-            names=["Z", "Symbol", "Name", "Weight", "Density"],
-            dtype={
-                "Z": int,
-                "Symbol": str,
-                "Name": str,
-                "Weight": str,
-                "Density": float,
-            },
-        )
-        df["Weight"] = df["Weight"].apply(self._parse_value)
-
-        return df
-
-    def _generate_material_list(self):
-        """
-        returns list of available elements in database to mitigate errors
-        eventually redundant as the database is completed
-        """
-        self._fileslist = glob.glob(self.db_path + "*.txt")
-        self._materials = set(Path(f).stem.split("_")[-1] for f in self._fileslist)
-        return [f.split("_")[-1].split(".")[0] for f in self._fileslist]
-
-    def _parse_value(self, val):
-        """
-        try/except function to correct the formatting on values in the database
-        Weird bug work around
-        """
-        try:
-            if "[" in val:
-                return float(val[1:-1])
-            else:
-                f = val.split(".")
-                # print(f)
-                return float(".".join([f[0], f[1][0]]))
-        except ValueError:
-            return val
 
     def parse_formula(self, formula: str) -> dict:
         """
@@ -255,56 +171,43 @@ class Engine:
         # Return the element counts dictionary
         return element_counts
 
-    def _nonuniquer(self, arr, offset=1e-7):
+    def missing_atomic_entries(self):
         """
-        Shifts the k-edge in material databases by 0.1 eV to enable interpolation at the edge
+        Return list of atomic symbols present in the atomic DB but missing as
+        individual material files for this Engine instance.
         """
-        result = arr.copy()  # Create a copy of the input array to work with
-        seen_values = {}  # A dictionary to store the count of each value
+        atomic_symbols = set(self.database.atomic["Symbol"].astype(str).tolist())
+        missing = sorted(list(atomic_symbols - self._materials))
+        return missing
 
-        for i in range(len(result)):
-            if result[i] in seen_values:
-                new_value = result[i] + offset
-                while new_value in seen_values or new_value in result:
-                    # Check for duplicates in both seen values and the new array
-                    new_value += offset
-                seen_values[new_value] = 1
-                result[i] = new_value
-            else:
-                seen_values[result[i]] = 1
-        assert np.all(np.diff(result) > 0), print(result)
-        return result
-
-    def _db_scraper(self, material, energies=None):
+    def list_available_columns(self):
         """
-        Main database scraping tool.
-        Looks for each element in the database according to the material string and loads necessary cross-sections
-        (Optional) Interpolates cross-sections over the desired energies.
+        Lists the available columns for the current engine.
         """
+        for e in ENGINE_CONFIGS[self.name].avail_columns:
+            print(f"{e.name}: {e.value}")
 
-        if material.lower() == "vac":
-            if energies is None:
-                print("Energies must be defined for vacuum transmission")
-            else:
-                elist = energies
-                clist = np.ones((1, len(energies)))
-                return elist, clist[0]
-        else:
-            data = np.loadtxt(
-                f"{self.db_path}{self.name}_{material}.txt", skiprows=self.skiprows
+    def change_column(self, new_col: int):
+        """
+        Changes the column read by the database scraper.
+        Use Engine.list_available_columns() to see valid columns.
+        The appropriate Column Enum can be used to select the desired column for the given engine.
+
+        Example:
+        >> nist_engine = Engine("NIST")
+        >> nist_engine.change_column(NISTColumn.COHERENT_SCATTER)
+
+        Parameters
+        ----------
+        new_col: int - the column number to read from the database file. Must be a valid column for the given engine.
+        """
+        # Check if the new column is valid for the current engine
+        if new_col not in [e.value for e in ENGINE_CONFIGS[self.name].avail_columns]:
+            raise ValueError(
+                f"Invalid column {new_col} for engine {self.name}. Use list_available_columns() to see valid columns."
             )
-            elist = np.array(data[:, 0])
-            clist = np.array(data[:, self.col])
-            if energies is None:
-                return elist, clist
-            else:
-                ein2 = self._nonuniquer(elist)
-                c3 = pchip(ein2, clist)
-                cout = c3(energies)
-                return energies, cout
-
-    def _interpolation(self, e, sigma, method=pchip):
-        return method(e, sigma)
+        self.col = new_col
+        print(f"Column changed to {ENGINE_CONFIGS[self.name].avail_columns(new_col).name} ({new_col}) for engine {self.name}.")
 
     def db_scraper(self, material, energies=None):
         """
@@ -373,7 +276,7 @@ class Engine:
                     # tidied up version of the previous function
                     data = np.loadtxt(
                         f"{self.db_path}{self.name}_{material}.txt",
-                        skiprows=self.skiprows,
+                        skiprows=self.skip_rows,
                     )
                     e_list = self._nonuniquer(np.array(data[:, 0]))
                     c_list = np.array(data[:, self.col])
@@ -385,6 +288,114 @@ class Engine:
 
                     return e_list, c_list
 
+    def _declare_new_columns(self, val: int):
+        """
+        Deprecated method for changing the column read by the database scraper.
+        Use change_column(new_col) instead.
+        """
+        print(
+            "Warning: _declare_new_columns is deprecated. Use change_column(new_col) instead."
+        )
+        self.change_column(val)
+
+    def _generate_atomic_table(self):
+        """
+        Return dataframe for atomic number and weight
+        Includes symbol parsing frame as well
+        """
+        df = pd.read_csv(
+            f"{DATABASE_DIR}/atomic_weight.db",
+            delimiter="\t",
+            header=0,
+            usecols=[0, 1, 2, 3, 5],
+            names=["Z", "Symbol", "Name", "Weight", "Density"],
+            dtype={
+                "Z": int,
+                "Symbol": str,
+                "Name": str,
+                "Weight": str,
+                "Density": float,
+            },
+        )
+        df["Weight"] = df["Weight"].apply(self._parse_value)
+
+        return df
+
+    def _generate_material_list(self):
+        """
+        returns list of available elements in database to mitigate errors
+        eventually redundant as the database is completed
+        """
+        self._fileslist = glob.glob(self.db_path + "*.txt")
+        self._materials = set(Path(f).stem.split("_")[-1] for f in self._fileslist)
+        return [f.split("_")[-1].split(".")[0] for f in self._fileslist]
+
+    def _parse_value(self, val):
+        """
+        try/except function to correct the formatting on values in the database
+        Weird bug work around
+        """
+        try:
+            if "[" in val:
+                return float(val[1:-1])
+            else:
+                f = val.split(".")
+                # print(f)
+                return float(".".join([f[0], f[1][0]]))
+        except ValueError:
+            return val
+
+    def _nonuniquer(self, arr, offset=1e-7):
+        """
+        Shifts the k-edge in material databases by 0.1 eV to enable interpolation at the edge
+        """
+        result = arr.copy()  # Create a copy of the input array to work with
+        seen_values = {}  # A dictionary to store the count of each value
+
+        for i in range(len(result)):
+            if result[i] in seen_values:
+                new_value = result[i] + offset
+                while new_value in seen_values or new_value in result:
+                    # Check for duplicates in both seen values and the new array
+                    new_value += offset
+                seen_values[new_value] = 1
+                result[i] = new_value
+            else:
+                seen_values[result[i]] = 1
+        assert np.all(np.diff(result) > 0), print(result)
+        return result
+
+    def _db_scraper(self, material, energies=None):
+        """
+        Main database scraping tool.
+        Looks for each element in the database according to the material string and loads necessary cross-sections
+        (Optional) Interpolates cross-sections over the desired energies.
+        """
+
+        if material.lower() == "vac":
+            if energies is None:
+                print("Energies must be defined for vacuum transmission")
+            else:
+                elist = energies
+                clist = np.ones((1, len(energies)))
+                return elist, clist[0]
+        else:
+            data = np.loadtxt(
+                f"{self.db_path}{self.name}_{material}.txt", skiprows=self.skip_rows
+            )
+            elist = np.array(data[:, 0])
+            clist = np.array(data[:, self.col])
+            if energies is None:
+                return elist, clist
+            else:
+                ein2 = self._nonuniquer(elist)
+                c3 = pchip(ein2, clist)
+                cout = c3(energies)
+                return energies, cout
+
+    def _interpolation(self, e, sigma, method=pchip):
+        return method(e, sigma)
+
     def _raw_db_scraper(self, file_string, energies=None):
         """
         Flexibile database scraper, used in testing to evaluate new cross-section
@@ -392,7 +403,7 @@ class Engine:
 
         Declare "file_string" as full path to desired file.
         """
-        data = np.loadtxt(f"{file_string}", skiprows=self.skiprows)
+        data = np.loadtxt(f"{file_string}", skiprows=self.skip_rows)
         elist = np.array(data[:, 0])
         clist = np.array(data[:, self.col])
         if energies is None:
@@ -402,12 +413,3 @@ class Engine:
             c3 = pchip(ein2, clist)
             cout = c3(energies)
             return energies, cout
-
-    def missing_atomic_entries(self):
-        """
-        Return list of atomic symbols present in the atomic DB but missing as
-        individual material files for this Engine instance.
-        """
-        atomic_symbols = set(self.database.atomic["Symbol"].astype(str).tolist())
-        missing = sorted(list(atomic_symbols - self._materials))
-        return missing

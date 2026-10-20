@@ -36,15 +36,6 @@ class Layer:
         self.active: bool = active
         self.energies: np.ndarray = self.material.energies
 
-    def _add_area(self, x, y, z):
-        """
-        Placeholder function for eventual areal version of the script
-        Currently does nothing.
-        """
-        self.x = x
-        self.y = y
-        self.z = z
-
     def get_transmission(self):
         """
         Exposes the Material get_transmission function
@@ -73,6 +64,15 @@ class Layer:
 
     def regenerate_material(self):
         self.material.update_cross_sections(self.energies)
+
+    def _add_area(self, x, y, z):
+        """
+        Placeholder function for eventual areal version of the script
+        Currently does nothing.
+        """
+        self.x = x
+        self.y = y
+        self.z = z
 
 
 class System:

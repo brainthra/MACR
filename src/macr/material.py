@@ -61,10 +61,6 @@ class Material:
             assert isinstance(genericName, str)
             self.materialstr = genericName
 
-    def _parse_compound(self, compound):
-        element_pat = re.compile(r"([A-Z][a-z]?)(\d*)")
-        return element_pat.findall(compound)
-
     def update_cross_sections(self, energies):
         x = self.engine.database.atomic
         sigma = np.zeros_like(energies)
@@ -87,10 +83,6 @@ class Material:
             or (self.engine.name == "SRIM")
         ):
             self._estarcorrection()
-
-    def _estarcorrection(self):
-        """correction for the estar units"""
-        self.sigma = self.sigma / self.energies
 
     def get_transmission(self, thickness):
         """calculates the transmission of x-rays through a layer:
@@ -144,6 +136,14 @@ class Material:
         self.output["energy_map"] = energy_map
         self.output["track_map"] = track_map
         self.output["zsteps"] = zsteps
+
+    def _estarcorrection(self):
+        """correction for the estar units"""
+        self.sigma = self.sigma / self.energies
+
+    def _parse_compound(self, compound):
+        element_pat = re.compile(r"([A-Z][a-z]?)(\d*)")
+        return element_pat.findall(compound)
 
     # depreciating functions
     def generateCrossSections(self, material, energies):
