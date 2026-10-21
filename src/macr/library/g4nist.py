@@ -1,3 +1,9 @@
+"""Predefined materials from the Geant4 NIST material database.
+
+Each exported symbol is a :class:`macr.material.Material` configured with the
+corresponding compound composition and density.
+"""
+
 from ..material import Material
 from ..library import ENERGIES, ENGINE
 

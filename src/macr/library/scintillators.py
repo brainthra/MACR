@@ -1,3 +1,8 @@
+"""Predefined scintillator materials.
+
+Each exported symbol is a :class:`macr.material.Scintillator` configured with a compound composition, density, and conversion factor.
+"""
+
 from ..material import Scintillator
 from ..library import ENERGIES, ENGINE
 
