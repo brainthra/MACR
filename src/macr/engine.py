@@ -107,7 +107,7 @@ class Engine:
         _generate_atomic_table - loads atomic weights, atomic numbers from database file
         _generate_material_list - generates list of materials in the database
         skiprows, col values - pre-declared values to enable scraping of the database files
-                             - can be varied by user via "_declare_new_columns" method
+                             - can be varied by user via "change_column" method
 
     Manual - Called by user:
         parse_forumla - seperates a given chemical composotion into constituent
@@ -116,9 +116,9 @@ class Engine:
                      energies, if energies are not declared it loads default values.
                      Non-unique values are nudged by 0.1 eV to enable interpolation but
                      preserve k-edge
-        _declare_new_columns - by default the Engine returns the total cross-section for
+        change_column - by default the Engine returns the total cross-section for
                                each element, this method switches the column read by the
-                               scraper. Call Engine._declare_new_columns? for more details
+                               scraper. Call Engine.change_column? for more details
 
     """
 
