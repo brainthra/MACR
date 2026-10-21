@@ -65,14 +65,6 @@ class Layer:
     def regenerate_material(self):
         self.material.update_cross_sections(self.energies)
 
-    def _add_area(self, x, y, z):
-        """
-        Placeholder function for eventual areal version of the script
-        Currently does nothing.
-        """
-        self.x = x
-        self.y = y
-        self.z = z
 
 
 class System:
