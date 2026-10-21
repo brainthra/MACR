@@ -196,7 +196,7 @@ class Engine:
         ValueError
             If ``new_col`` is not available for this engine.
 
-        Usage
+        Examples
         -----
         >>> engine = Engine("NIST")
         >>> engine.change_column(NISTColumn.COHERENT_SCATTER)
