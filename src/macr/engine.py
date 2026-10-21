@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 from enum import IntEnum
 from dataclasses import dataclass
-from typing import Literal
+from typing import Final, Literal
 
 # Resolve the path to the root of the project
 ROOT_DIR = Path(__file__).resolve().parents[0]  # Goes from engine.py -> database
@@ -14,7 +14,9 @@ ROOT_DIR = Path(__file__).resolve().parents[0]  # Goes from engine.py -> databas
 # Now get path to the database directory
 DATABASE_DIR = ROOT_DIR / "database"
 
-AVAILABLE_DATABASES = ["NIST", "ESTAR", "PSTAR", "SRIM"]
+AVAILABLE_DATABASES: Final[frozenset[str]] = frozenset(
+    {"NIST", "ESTAR", "PSTAR", "SRIM"}
+)
 
 class NISTColumn(IntEnum):
     COHERENT_SCATTER = 1
@@ -121,7 +123,9 @@ class Engine:
     """
 
     def __init__(self, name: Literal["NIST", "ESTAR", "PSTAR", "SRIM"]) -> None:
-        assert name in ENGINE_CONFIGS
+        assert name in AVAILABLE_DATABASES, (
+            f"Invalid engine name: {name}. Must be one of {AVAILABLE_DATABASES}."
+        )
 
         config: EngineConfig = ENGINE_CONFIGS[name]
         
