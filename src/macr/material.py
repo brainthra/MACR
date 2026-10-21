@@ -34,7 +34,7 @@ class Material:
     """
 
     def __init__(
-        self, material, density, energies=None, engine="NIST", genericName=None
+        self, material, density, energies=None, engine="NIST", generic_name=None
     ):
         # initialise or use engine
         assert (isinstance(engine, str)) or (isinstance(engine, Engine))
@@ -55,11 +55,11 @@ class Material:
 
         self.update_cross_sections(energies)
 
-        if genericName is None:
+        if generic_name is None:
             self.materialstr = material
         else:
-            assert isinstance(genericName, str)
-            self.materialstr = genericName
+            assert isinstance(generic_name, str)
+            self.materialstr = generic_name
 
     def update_cross_sections(self, energies):
         x = self.engine.database.atomic
@@ -160,7 +160,7 @@ class Scintillator(Material):
         kappa=1.0,
         energies=None,
         engine="NIST",
-        genericName=None,
+        generic_name=None,
     ):
-        super().__init__(material, density, energies, engine, genericName)
+        super().__init__(material, density, energies, engine, generic_name)
         self.kappa = kappa

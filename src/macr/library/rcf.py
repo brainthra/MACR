@@ -4,13 +4,13 @@ from ..library import ENERGIES, ENGINE
 
 # region - RCF
 basePolyester = Material(
-    "C10H8O4", density=1.397,  energies=ENERGIES, engine=ENGINE, genericName="BaseLayer"
+    "C10H8O4", density=1.397,  energies=ENERGIES, engine=ENGINE, generic_name="BaseLayer"
 )
 activeLayer = Material(
-    "C2H4O1", density=1.2,  energies=ENERGIES, engine=ENGINE, genericName="ActiveLayer"
+    "C2H4O1", density=1.2,  energies=ENERGIES, engine=ENGINE, generic_name="ActiveLayer"
 )
 acrylicAdhesive = Material(
-    "C7H12O2", density=1.2,  energies=ENERGIES, engine=ENGINE, genericName="BaseLayer"
+    "C7H12O2", density=1.2,  energies=ENERGIES, engine=ENGINE, generic_name="BaseLayer"
 )
 
 """
