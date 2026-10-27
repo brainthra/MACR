@@ -176,7 +176,8 @@ class Material:
         self.update_cross_sections(self.energies)
 
 class Scintillator(Material):
-    """Material with a scintillator response scaling factor.
+    """Material with a scintillator response scaling factor (kappa).
+    Includes an additional kappa parameter to Material.
 
     Parameters
     ----------
