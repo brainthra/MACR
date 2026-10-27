@@ -13,28 +13,18 @@ import copy
 class Layer:
     """Material with a thickness and active-detector flag.
 
-    Attributes
+    Parameters
     ----------
     material : Material
-        The material of the layer.
+        Material represented by the layer.
     thickness : float
-        The thickness of the layer in mm.
-    active : bool
-        Whether the layer contributes to the response matrix.
+        Layer thickness in mm.
+    active: bool
+        Determines if the energy absorption in the Layer is calculated by default in System
     """
 
     def __init__(self, material: Material, thickness: float, active: bool) -> None:
-        """Initialise a layer.
-
-        Parameters
-        ----------
-        material : Material
-            Material represented by the layer.
-        thickness : float
-            Layer thickness in mm.
-        active : bool
-            Whether the layer is an active detector layer.
-        """
+        """Initialise a layer."""
         self.material = material
         self.thickness: float = thickness
         self.active: bool = active
